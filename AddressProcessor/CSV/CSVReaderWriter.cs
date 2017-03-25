@@ -12,131 +12,148 @@ namespace AddressProcessing.CSV
     {
         private StreamReader _readerStream = null;
         private StreamWriter _writerStream = null;
+        private Mode _processMode;
+        private const string Tab = "\t";
 
         [Flags]
-        public enum Mode { Read = 1, Write = 2 };
+        public enum Mode { NotSet = 0, Read = 1, Write = 2 };
 
+        /// <summary>
+        /// Initiating process, setting process mode and initialising approriate stream
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="mode"></param>
         public void Open(string fileName, Mode mode)
         {
-            if (mode == Mode.Read)
-            {
-                _readerStream = File.OpenText(fileName);
-            }
-            else if (mode == Mode.Write)
-            {
-                FileInfo fileInfo = new FileInfo(fileName);
-                _writerStream = fileInfo.CreateText();
-            }
-            else
-            {
-                throw new Exception("Unknown file mode for " + fileName);
-            }
-        }
+            _processMode = mode;
 
-        public void Write(params string[] columns)
-        {
-            string outPut = "";
-
-            for (int i = 0; i < columns.Length; i++)
+            switch (mode)
             {
-                outPut += columns[i];
-                if ((columns.Length - 1) != i)
+                case Mode.Read:
                 {
-                    outPut += "\t";
+                    SetReaderStream(fileName);
+                    break;
+                }
+                case Mode.Write:
+                {
+                    SetWriterStream(fileName);
+                    break;
+                }
+                default:
+                {
+                    // it would be better not to throw exception, as this will stop multiple file processing
+                    throw new Exception("Unknown file processing mode for " + fileName);
                 }
             }
-
-            WriteLine(outPut);
         }
 
+        /// <summary>
+        /// Only create a reader stream if the file actually exists, otherwise stream not created and other methods check for valid stream
+        /// </summary>
+        /// <param name="fileName">Name of file to be read</param>
+        private void SetReaderStream(string fileName)
+        {
+            if (!File.Exists(fileName))
+                return;
+
+            _readerStream = File.OpenText(fileName);
+        }
+
+        /// <summary>
+        /// Only create a writer stream if the filename provided is valid, and ensure that if file exists already it is removed
+        /// </summary>
+        /// <param name="fileName">Name of file to be created</param>
+        private void SetWriterStream(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return;
+
+            if (File.Exists(fileName))
+                File.Delete(fileName);
+
+            var fileInfo = new FileInfo(fileName);
+            _writerStream = fileInfo.CreateText();
+        }
+
+        /// <summary>
+        /// Assuming that this may be called from elsewhere, need to keep public signature, but pass processing onto overloaded
+        /// method
+        /// </summary>
+        /// <param name="column1">Empty parameter that is never used, but we can pass on to the overload as an out parameter</param>
+        /// <param name="column2">Empty parameter that is never used, but we can pass on to the overload as an out parameter</param>
+        /// <returns></returns>
         public bool Read(string column1, string column2)
         {
-            const int FIRST_COLUMN = 0;
-            const int SECOND_COLUMN = 1;
-
-            string line;
-            string[] columns;
-
-            char[] separator = { '\t' };
-
-            line = ReadLine();
-            columns = line.Split(separator);
-
-            if (columns.Length == 0)
-            {
-                column1 = null;
-                column2 = null;
-
-                return false;
-            }
-            else
-            {
-                column1 = columns[FIRST_COLUMN];
-                column2 = columns[SECOND_COLUMN];
-
-                return true;
-            }
+            return Read(out column1, out column2);
         }
 
+        /// <summary>
+        /// Method reads line and returns line contents as seperate strings. Only returns first two elements. Any further elements that
+        /// may exist on the line would be ignored
+        /// </summary>
+        /// <param name="column1">First part of read line</param>
+        /// <param name="column2">Second part of read line</param>
+        /// <returns>Boolean result to indicate success of the request</returns>
         public bool Read(out string column1, out string column2)
         {
-            const int FIRST_COLUMN = 0;
-            const int SECOND_COLUMN = 1;
+            var lineResults = ReadLine();
 
-            string line;
-            string[] columns;
-
-            char[] separator = { '\t' };
-
-            line = ReadLine();
-
-            if (line == null)
-            {
-                column1 = null;
-                column2 = null;
-
-                return false;
-            }
-
-            columns = line.Split(separator);
-
-            if (columns.Length == 0)
-            {
-                column1 = null;
-                column2 = null;
-
-                return false;
-            } 
-            else
-            {
-                column1 = columns[FIRST_COLUMN];
-                column2 = columns[SECOND_COLUMN];
-
-                return true;
-            }
+            column1 = lineResults.Item2;
+            column2 = lineResults.Item3;
+            return lineResults.Item1;
         }
 
-        private void WriteLine(string line)
+        /// <summary>
+        /// Preferred usage of returning read result and line contents. Includes validation of request, and validation of contents of read line
+        /// </summary>
+        /// <returns>Tuple containing item1 indicating success or failure of request, and item2 and item3 are first two elements read from line that were separated by tab</returns>
+        public Tuple<bool, string, string> ReadLine()
         {
-            _writerStream.WriteLine(line);
+            const char tabSeparator = '\t';
+            const int firstColumn = 0;
+            const int secondColumn = 1;
+
+            var falseResults = new Tuple<bool, string, string>(false, string.Empty, string.Empty);
+
+            // If file did not exist, then do not try to process 
+            if (_processMode != Mode.Read || _readerStream == null)
+                return falseResults;
+
+            var line = _readerStream.ReadLine();
+
+            if (line == null || !line.Contains(Tab))
+                return falseResults;
+
+            var columns = line.Split(tabSeparator);
+            return new Tuple<bool, string, string>(true, columns[firstColumn], columns[secondColumn]);
         }
 
-        private string ReadLine()
+        /// <summary>
+        /// Validate writer stream status and write tab delimited column data 
+        /// </summary>
+        /// <param name="columns">Array of elements to write to stream using tab delimiter</param>
+        public void Write(params string[] columns)
         {
-            return _readerStream.ReadLine();
+            if (_processMode != Mode.Write || _writerStream == null)
+                return;
+
+            _writerStream.WriteLine(string.Join(Tab, columns));
         }
 
+        /// <summary>
+        /// Close stream based on the process mode request and whether stream was initiated
+        /// Finalise clearup by clearing process mode, thus ensuring that the open method is
+        /// called before processing another file
+        /// </summary>
         public void Close()
         {
-            if (_writerStream != null)
-            {
+            if (_processMode == Mode.Write && _writerStream != null)
                 _writerStream.Close();
-            }
 
-            if (_readerStream != null)
-            {
+            if (_processMode == Mode.Read && _readerStream != null)
                 _readerStream.Close();
-            }
+
+            _processMode = Mode.NotSet;
         }
     }
 }
