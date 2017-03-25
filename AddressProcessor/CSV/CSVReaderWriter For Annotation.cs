@@ -8,9 +8,11 @@ namespace AddressProcessing.CSV
 
         Please leave the rest of this file as it is so we can discuss your concerns during the next stage of the interview process.
         
-        *)
-        *)
-        *)
+        *) Have one public method to process file, and two core private methods to process Reading of file, and Writing of file. Keeping methods simple and self contained (easier to read, understand and test). Managing of the moving parts of the reading and writing of file should not be controlled from outside this class
+        *) Enclose file processing with a using statement to ensure that objects are closed an de-referenced approriately, and include checks for file existence before reading or writing
+        *) No need for two read methods that are effectively doing the same thing.
+        *) Use Tuple rather than two out parameters - and especially if using C# 7, where Tuple items can be specifically named
+        *) Code cleanup, use var for variable declaration, naming in PascalCase and camelCase - replace CSV with Csv, and outPut with output 
     */
 
     public class CSVReaderWriterForAnnotation

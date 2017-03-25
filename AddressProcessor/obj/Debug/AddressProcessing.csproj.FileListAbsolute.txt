@@ -1,0 +1,5 @@
+\\Mac\Home\Documents\code\backend\AddressProcessor\bin\Debug\AddressProcessing.dll
+\\Mac\Home\Documents\code\backend\AddressProcessor\bin\Debug\AddressProcessing.pdb
+\\Mac\Home\Documents\code\backend\AddressProcessor\obj\Debug\AddressProcessing.csprojResolveAssemblyReference.cache
+\\Mac\Home\Documents\code\backend\AddressProcessor\obj\Debug\AddressProcessing.dll
+\\Mac\Home\Documents\code\backend\AddressProcessor\obj\Debug\AddressProcessing.pdb
