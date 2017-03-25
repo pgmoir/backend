@@ -8,6 +8,15 @@ namespace AddressProcessing.CSV
            Assume this code is in production and backwards compatibility must be maintained.
     */
 
+    /* 
+        The main trade off that was made in refactoring to cater for backward compatbility and the fact that our CSVReaderWriter is a public interface and could be used 
+        by any application referencing it, and therefore we were limited in how to change the primary structure. Ideally it would be preferable to have one ReadFile method that returned 
+        an enumerated collection of the rows split into two properties. This would mean that we could encapsulate all the reading logic with a using statement. I did 
+        consider using the open method to handle the open, read and close requirements all at once, and just return items from an in memory collection. The close method would become
+        redundant. Potential issue here may be the size of the file, and would holding this all in memory cause an issue. And in similar parttern, a write method which took in an array of 
+        arrays or tuple elements would be safer and faster.
+    */
+
     public class CSVReaderWriter
     {
         private StreamReader _readerStream = null;
